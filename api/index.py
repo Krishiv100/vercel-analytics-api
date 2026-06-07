@@ -59,7 +59,7 @@ class AnalyticsRequest(BaseModel):
     regions: List[str]
     threshold_ms: float
 
-@app.post("/analytics")
+@app.post("/api/analytics")
 def get_analytics(payload: AnalyticsRequest):
     response = {}
     
