@@ -6,13 +6,15 @@ import numpy as np
 
 app = FastAPI()
 
-# --- CRITICAL: FIXES YOUR CORS ERROR ---
+# ────────────────────────────────────────────────────────
+#  CRITICAL: THIS CODE RESOLVES YOUR CORS ERROR
+# ────────────────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allows any origin to access your endpoint
+    allow_origins=["*"],          # Allows any external dashboard to read data
     allow_credentials=True,
-    allow_methods=["*"],  # Allows POST, GET, OPTIONS, etc.
-    allow_headers=["*"],
+    allow_methods=["POST", "GET", "OPTIONS"], # Grants permission for POST requests
+    allow_headers=["*"],          # Allows headers like Content-Type
 )
 
 # Hardcoded data from your telemetry bundle
@@ -47,7 +49,7 @@ TELEMETRY_DATA = [
   {"region": "amer", "service": "checkout", "latency_ms": 133.06, "uptime_pct": 98.527, "timestamp": 20250304},
   {"region": "amer", "service": "recommendations", "latency_ms": 229.02, "uptime_pct": 98.622, "timestamp": 20250305},
   {"region": "amer", "service": "payments", "latency_ms": 218.75, "uptime_pct": 99.041, "timestamp": 20250306},
-  {"region": "amer", "service": "support", "uptime_pct": 98.823, "latency_ms": 212.76, "timestamp": 20250307},
+  {"region": "amer", "service": "support", "latency_ms": 212.76, "uptime_pct": 98.823, "timestamp": 20250307},
   {"region": "amer", "service": "support", "latency_ms": 145.51, "uptime_pct": 98.598, "timestamp": 20250308},
   {"region": "amer", "service": "checkout", "latency_ms": 191.94, "uptime_pct": 98.823, "timestamp": 20250309},
   {"region": "amer", "service": "catalog", "latency_ms": 100.63, "uptime_pct": 98.013, "timestamp": 20250310},
@@ -64,7 +66,6 @@ def get_analytics(payload: AnalyticsRequest):
     response = {}
     
     for target_region in payload.regions:
-        # Filter telemetry data matching current region loop (case-insensitive)
         region_records = [
             r for r in TELEMETRY_DATA 
             if r["region"].lower() == target_region.lower()
@@ -76,7 +77,6 @@ def get_analytics(payload: AnalyticsRequest):
         latencies = [r["latency_ms"] for r in region_records]
         uptimes = [r["uptime_pct"] for r in region_records]
         
-        # Calculate statistics
         avg_latency = float(np.mean(latencies))
         p95_latency = float(np.percentile(latencies, 95))
         avg_uptime = float(np.mean(uptimes))
@@ -91,7 +91,6 @@ def get_analytics(payload: AnalyticsRequest):
         
     return response
 
-# Optional catch-all root so you know it's alive
 @app.get("/")
 def read_root():
     return {"status": "healthy", "service": "eShopCo Telemetry API"}
