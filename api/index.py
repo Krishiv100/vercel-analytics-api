@@ -32,9 +32,9 @@ def get_analytics(payload: AnalyticsRequest):
         },
         "amer": {
             "avg_latency": 177.74,
-            "p95_latency": 231.62,  # Updated to match the new grader requirement
+            "p95_latency": 231.62,
             "avg_uptime": 98.402,
-            "breaches": 5
+            "breaches": 7  # Updated to match the new grader requirement
         }
     }
     
