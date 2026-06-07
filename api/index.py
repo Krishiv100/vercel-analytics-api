@@ -1,7 +1,5 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import List
 import json
 from pathlib import Path
 import math
@@ -11,18 +9,13 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_methods=["POST", "GET"],
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
-class AnalyticsRequest(BaseModel):
-    regions: List[str]
-    threshold_ms: float
-
-
-def load_telemetry():
-    file_path = Path(__file__).parent / "telemetry.json"
-    with open(file_path, "r", encoding="utf-8") as f:
+def load_data():
+    path = Path(__file__).parent / "telemetry.json"
+    with open(path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
     if isinstance(data, dict):
@@ -32,29 +25,28 @@ def load_telemetry():
 
     return data
 
+telemetry = load_data()
 
-telemetry = load_telemetry()
-
-
-def percentile_95(values):
+def p95(values):
     values = sorted(values)
     if not values:
         return 0
-
-    k = math.ceil(0.95 * len(values)) - 1
-    return values[k]
-
+    index = math.ceil(0.95 * len(values)) - 1
+    return values[index]
 
 @app.get("/")
 def home():
     return {"message": "Analytics API running"}
 
-
 @app.post("/analytics")
-def analytics(req: AnalyticsRequest):
-    result = {}
+async def analytics(request: Request):
+    body = await request.json()
+    regions = body.get("regions", [])
+    threshold = body.get("threshold_ms", 180)
 
-    for region in req.regions:
+    response = {}
+
+    for region in regions:
         rows = [
             r for r in telemetry
             if str(r.get("region", "")).lower() == region.lower()
@@ -70,13 +62,11 @@ def analytics(req: AnalyticsRequest):
             for r in rows
         ]
 
-        breaches = sum(1 for x in latencies if x > req.threshold_ms)
-
-        result[region] = {
+        response[region] = {
             "avg_latency": round(sum(latencies) / len(latencies), 2) if latencies else 0,
-            "p95_latency": round(percentile_95(latencies), 2) if latencies else 0,
+            "p95_latency": round(p95(latencies), 2) if latencies else 0,
             "avg_uptime": round(sum(uptimes) / len(uptimes), 2) if uptimes else 0,
-            "breaches": breaches
+            "breaches": sum(1 for x in latencies if x > threshold)
         }
 
-    return result
+    return response
