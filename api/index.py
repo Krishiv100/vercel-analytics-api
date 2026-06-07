@@ -1,10 +1,16 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 import json
 import math
 from pathlib import Path
 
 app = FastAPI()
+
+CORS_HEADERS = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Headers": "*",
+}
 
 app.add_middleware(
     CORSMiddleware,
@@ -16,19 +22,11 @@ app.add_middleware(
 
 def load_telemetry():
     folder = Path(__file__).parent
-
-    possible_files = [
-        "telemetry.json",
-        "telemetary.json",
-        "telementary.json"
-    ]
-
-    for name in possible_files:
+    for name in ["telemetry.json", "telemetary.json", "telementary.json"]:
         path = folder / name
         if path.exists():
             with open(path, "r", encoding="utf-8") as f:
                 return json.load(f)
-
     return []
 
 telemetry = load_telemetry()
@@ -37,20 +35,28 @@ def p95(values):
     values = sorted(values)
     if not values:
         return 0
-    index = math.ceil(0.95 * len(values)) - 1
-    return values[index]
+    return values[math.ceil(0.95 * len(values)) - 1]
+
+def json_response(data):
+    return Response(
+        content=json.dumps(data),
+        media_type="application/json",
+        headers=CORS_HEADERS
+    )
+
+@app.options("/{path:path}")
+async def options_handler(path: str):
+    return Response(headers=CORS_HEADERS)
 
 @app.get("/")
 def home():
-    return {
+    return json_response({
         "message": "Analytics API running",
         "records_loaded": len(telemetry)
-    }
+    })
 
-@app.post("/analytics")
-async def analytics(request: Request):
+async def calculate(request: Request):
     body = await request.json()
-
     regions = body.get("regions", [])
     threshold = float(body.get("threshold_ms", 180))
 
@@ -72,4 +78,12 @@ async def analytics(request: Request):
             "breaches": sum(1 for x in latencies if x > threshold)
         }
 
-    return result
+    return json_response(result)
+
+@app.post("/analytics")
+async def analytics(request: Request):
+    return await calculate(request)
+
+@app.post("/analytics/")
+async def analytics_slash(request: Request):
+    return await calculate(request)
