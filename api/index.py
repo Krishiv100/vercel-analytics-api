@@ -6,18 +6,16 @@ import numpy as np
 
 app = FastAPI()
 
-# ────────────────────────────────────────────────────────
-#  CRITICAL: THIS CODE RESOLVES YOUR CORS ERROR
-# ────────────────────────────────────────────────────────
+# 1. Broadest application-level CORS configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],          # Allows any external dashboard to read data
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["POST", "GET", "OPTIONS"], # Grants permission for POST requests
-    allow_headers=["*"],          # Allows headers like Content-Type
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-# Hardcoded data from your telemetry bundle
+# Telemetry data bundle
 TELEMETRY_DATA = [
   {"region": "apac", "service": "catalog", "latency_ms": 218.08, "uptime_pct": 97.823, "timestamp": 20250301},
   {"region": "apac", "service": "payments", "latency_ms": 222.07, "uptime_pct": 99.171, "timestamp": 20250302},
